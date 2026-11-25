@@ -20,9 +20,142 @@ else Q <= {Q[2:0], sin};   // shift left, sin enters at LSB
 Serial output: sout = Q[3]   (the bit about to be shifted out)
 
 ## Design / RTL Program
+// gedit shift_reg.v 
+
+  
+
+module shift_reg ( 
+
+    input  wire       clk,   // clock 
+
+    input  wire       rst,   // asynchronous active-high reset 
+
+    input  wire       sin,   // serial input 
+
+    output wire       sout,  // serial output (MSB, about to shift out) 
+
+    output reg  [3:0] Q      // parallel output 
+
+); 
+
+    always @(posedge clk or posedge rst) begin 
+
+        if (rst) 
+
+            Q <= 4'b0000; 
+
+        else 
+
+            Q <= {Q[2:0], sin};   // shift left, sin enters at LSB 
+
+    end 
+
+  
+
+    assign sout = Q[3]; 
+
+endmodule 
 
 Testbench Program
+// gedit tb6.v 
 
+  
+
+module tb6; 
+
+    reg  clk, rst, sin; 
+
+    wire sout; 
+
+    wire [3:0] Q; 
+
+  
+
+    // Instantiate the shift register 
+
+    shift_reg uut ( 
+
+        .clk(clk), 
+
+        .rst(rst), 
+
+        .sin(sin), 
+
+        .sout(sout), 
+
+        .Q(Q) 
+
+    ); 
+
+  
+
+    // ---- Clock generation: 10 time-unit period ---- 
+
+    initial clk = 0; 
+
+    always #5 clk = ~clk; 
+
+  
+
+    initial begin 
+
+        // ---- VCD dump setup ---- 
+
+        $dumpfile("shift_reg.vcd");   // name of the VCD file to be generated 
+
+        $dumpvars(0, tb6);              // dump all signals in this testbench hierarchy 
+
+  
+
+        $monitor("Time=%0t rst=%b clk=%b sin=%b | Q=%b sout=%b", 
+
+                  $time, rst, clk, sin, Q, sout); 
+
+  
+
+        // ---- Apply asynchronous reset ---- 
+
+        rst = 1; sin = 0; 
+
+        #7  rst = 0; 
+
+  
+
+        // ---- Serially shift in the bit pattern 1 0 1 1 ---- 
+
+        @(negedge clk); sin = 1; 
+
+        @(negedge clk); sin = 0; 
+
+        @(negedge clk); sin = 1; 
+
+        @(negedge clk); sin = 1; 
+
+  
+
+        // ---- Hold sin = 0 and observe the pattern shift out ---- 
+
+        @(negedge clk); sin = 0; 
+
+        @(negedge clk); 
+
+        @(negedge clk); 
+
+  
+
+        // ---- Apply reset again mid-simulation ---- 
+
+        @(negedge clk); rst = 1; 
+
+        @(negedge clk); rst = 0; sin = 1; 
+
+  
+
+        #20 $finish; 
+
+    end 
+
+endmodule 
 
 
 
@@ -56,6 +189,8 @@ dve -full64 &
 A DVE environment will open.
 
 ## DVE Waveform Verification
+<img width="1600" height="880" alt="experiment6" src="https://github.com/user-attachments/assets/18d81273-e221-467e-9b5d-645aae779eef" />
+
 In DVE:
 ●	Open the testbench hierarchy.
 
